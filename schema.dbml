@@ -1,0 +1,203 @@
+Table references as Ref {
+  ref_name varchar [
+    pk,
+    note: 'Manually assigned reference name'
+  ]
+  doi varchar [
+    unique,
+    note: 'Digital Object Identifier (DOI)'
+  ]
+  medline_id int [
+    unique,
+    note: 'PubMed ID'
+  ]
+  url varchar [
+    unique,
+    note: 'Web address of this reference'
+  ]
+  first_author varchar [
+    not null,
+    note: 'First author name. Should formed by the surname, a comma and the initial of given names (no dots)'
+  ]
+  title varchar [not null, note: 'Article title']
+  year int [not null, note: 'Publish year']
+  published bool [
+    not null,
+    note: 'If the article is published or not'
+  ]
+
+  Note: 'Table storing core article identifiers that must be maintained manually'
+}
+
+Enum gene_enum {
+  CA
+  PR
+  RT
+  IN
+}
+
+Enum drug_class_enum {
+  CAI
+  PI
+  NRTI
+  NNRTI
+  INSTI
+}
+
+Enum amino_acid_enum {
+  A [note: 'A/Ala, Alanine']
+  C [note: 'C/Cys, Cysteine']
+  D [note: 'D/Asp, Aspartic acid']
+  E [note: 'E/Glu, Glutamic acid']
+  F [note: 'F/Phe, Phenylalanine']
+  G [note: 'G/Gly, Glutamine']
+  H [note: 'H/His, Histidine']
+  I [note: 'I/Ile, Isoleucine']
+  K [note: 'K/Lys, Lysine']
+  L [note: 'L/Leu, Leucine']
+  M [note: 'M/Met, Methionine']
+  N [note: 'N/Asn, Asparagine']
+  P [note: 'P/Pro, Proline']
+  Q [note: 'Q/Gln, Glutamine']
+  R [note: 'R/Arg, Arginine']
+  S [note: 'S/Ser, Serine']
+  T [note: 'T/Thr, Threonine']
+  V [note: 'V/Val, Valine']
+  W [note: 'W/Trp, Tryptophan']
+  Y [note: 'Y/Tyr, Tyrosine']
+  X [note: 'Out-frame deletion']
+  stop [note: 'Stop codon']
+  del [note: 'Deletion']
+  ins [note: 'Insertion']
+}
+
+Enum numeric_cmp_enum {
+  "=" [note: 'Equal']
+  ">" [note: 'More than']
+  "<" [note: 'Less than']
+  "~" [note: 'About']
+}
+
+Table drug_classes as DClass {
+  drug_class drug_class_enum [pk]
+  gene gene_enum
+
+  indexes {
+    gene
+  }
+}
+
+Table drugs as D {
+  drug_name varchar [pk, note: 'Drug name']
+  drug_class drug_class_enum [
+    ref: > DClass.drug_class,
+    not null
+  ]
+  approved bool [not null, note: 'FDA approval status of this drug']
+  drug_full_name varchar
+  fda_approval_date date
+
+  indexes {
+    drug_class
+  }
+}
+
+
+Enum isolate_type_enum {
+  mutations [note: 'The isolate is stored in mutation format']
+}
+
+Table isolates as Iso {
+  isolate_name varchar [pk, note: 'Isolate name']
+  isolate_date date [not null]
+
+  genbank_accn varchar [
+    note: 'Genbank accession number(s); comma delimited'
+  ]
+  date_entered date [not null]
+
+  indexes {
+    isolate_date
+    genbank_accn
+  }
+
+  Note: 'Core isolate table'
+}
+
+Table ref_isolates as RefLink {
+  ref_name varchar [ref: > Ref.ref_name]
+  isolate_name varchar [ref: > Iso.isolate_name]
+  is_primary bool [
+    note: 'If this link is the primary linkage between ref and iso'
+  ]
+
+  indexes {
+    (ref_name, isolate_name) [pk]
+  }
+}
+
+Table mutations as IsoMut {
+  isolate_name varchar [ref: > Iso.isolate_name]
+  gene gene_enum
+  position int [note: 'AA position in the gene']
+  amino_acid amino_acid_enum [note: 'Mutation amino acid']
+
+  indexes {
+    (isolate_name, gene, position, amino_acid) [pk]
+    position
+    amino_acid
+  }
+
+  Note: 'Isolate mutation lookup table'
+}
+
+
+Enum time_unit_enum {
+  "day"
+  "week"
+  "month"
+  "ordinal" [Note: "time unknown but in this sequence/ordinal"]
+}
+
+
+Table invitro_selection as IVSel {
+  ref_name varchar [ref: > Ref.ref_name]
+  isolate_name varchar [ref: > Iso.isolate_name]
+  baseline_isolate_name varchar [ref: > Iso.isolate_name]
+  cell_line varchar
+  experiment varchar
+  passage_cmp numeric_cmp_enum [default: '=']
+  passage int
+  passage_unknown bool
+  cumulative_culture_time_cmp numeric_cmp_enum [default: '=']
+  cumulative_culture_time int
+  cumulative_culture_time_unit time_unit_enum
+  cumulative_culture_time_unknown bool
+  section varchar [
+    note: 'The cited section from the reference; e.g. Figure 1, table 1 or page 1, para 4'
+  ]
+
+  indexes {
+    (ref_name, isolate_name) [pk]
+  }
+}
+
+
+Enum concentration_unit_enum {
+  "ng/ml"
+  "µM"
+  "pM"
+  "nM"
+}
+
+Table invitro_selection_drugs as IVSelRx {
+  ref_name varchar
+  experiment_name varchar
+  drug_name varchar [ref: > D.drug_name]
+  concentration_cmp numeric_cmp_enum [default: '=']
+  concentration float
+  concentration_unit dosage_unit_enum 
+  concentration_unknown bool
+}
+
+Ref: IVSelRx.(ref_name, experiment_name) > IVSel.(ref_name, experiment_name)
