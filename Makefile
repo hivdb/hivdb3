@@ -1,18 +1,27 @@
 DEPS = $(wildcard hivdb3/*.py) $(wildcard hivdb3/*/*.py)
-SRC_INVITRO_SEL = $(wildcard payload/worksheets/invitro_selection/*.csv)
-TGT_INVITRO_SEL = $(addprefix payload/tables/invitro_selection/,$(notdir $(SRC_INVITRO_SEL)))
+WSDIR = payload/worksheets
+TBDIR = payload/tables
 
-payload/tables/invitro_selection/%-ivsel.csv: payload/worksheets/invitro_selection/%-ivsel.csv
+SRC_INVITRO_SEL = $(wildcard $(WSDIR)/invitro_selection/*.csv)
+TGT_INVITRO_SEL = $(addprefix $(TBDIR)/invitro_selection/,$(notdir $(SRC_INVITRO_SEL)))
+$(TBDIR)/invitro_selection/%-ivsel.csv: $(WSDIR)/invitro_selection/%-ivsel.csv
 	@pipenv run python -m hivdb3.entry generate-invitro-selection $< $@
-
-payload/worksheets/isolates/invitro_selection_isolates.csv: $(DEPS) $(SRC_INVITRO_SEL) payload/worksheets/isolates/baseline_isolates.csv
-	@pipenv run python -m hivdb3.entry generate-ivsel-isolates \
-		payload/worksheets/invitro_selection $@ \
-		--baseline-csv payload/worksheets/isolates/baseline_isolates.csv
-
 $(TGT_INVITRO_SEL): $(DEPS) 
+payload: $(TGT_INVITRO_SEL)
 
-payload: $(TGT_INVITRO_SEL) payload/worksheets/isolates/invitro_selection_isolates.csv
+TGT_IVSEL_ISO = $(WSDIR)/isolates/invitro_selection_isolates.csv
+$(TGT_IVSEL_ISO): $(WSDIR)/isolates/baseline_isolates.csv $(DEPS) $(SRC_INVITRO_SEL)
+	@pipenv run python -m hivdb3.entry generate-ivsel-isolates \
+		$(WSDIR)/invitro_selection $@ \
+		--baseline-csv $< \
+		--consensus-csv $(WSDIR)/hiv1_consensus.csv
+
+payload: $(TGT_IVSEL_ISO)
+
+TGT_REFAA = $(TBDIR)/ref_amino_acid.csv
+$(TGT_REFAA): $(WSDIR)/hiv1_consensus.csv $(DEPS)
+	@pipenv run python -m hivdb3.entry generate-ref-amino-acid $< $@
+payload: $(TGT_REFAA)
 
 builder:
 	@docker build . -t hivdb/hivdb3-builder:latest

@@ -78,6 +78,22 @@ Enum numeric_cmp_enum {
   "~" [note: 'About']
 }
 
+Table ref_amino_acid as RefAA {
+  gene gene_enum [
+    note: 'Mutation gene'
+  ]
+  position int [
+    note: 'Position'
+  ]
+  amino_acid amino_acid_enum [
+    note: 'Amino acid'
+  ]
+
+  indexes {
+    (gene, position, amino_acid) [pk]
+  }
+}
+
 Table drug_classes as DClass {
   drug_class drug_class_enum [pk]
   gene gene_enum

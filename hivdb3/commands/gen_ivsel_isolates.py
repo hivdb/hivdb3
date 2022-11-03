@@ -7,6 +7,7 @@ from ..utils.csvv import load_csv, dump_csv, CSVReaderRow, CSVWriterRow
 from ..utils.mutations import load_mutations, dump_mutations, GenePos
 
 from .gen_invitro_selection import gen_isolate_names
+from .gen_ref_amino_acid import load_consensus
 
 
 def update_isolates(
@@ -62,7 +63,8 @@ def load_baseline(baseline_csv: str) -> Tuple[
 def ivsel_to_isolates(
     filenames: List[str],
     refseq_mutmaps: Dict[str, Dict[GenePos, Set[str]]],
-    renames: Dict[str, str]
+    renames: Dict[str, str],
+    refmap: Dict[GenePos, str]
 ) -> Iterable[CSVWriterRow]:
     isolates: Dict[str, CSVWriterRow] = {}
 
@@ -114,7 +116,7 @@ def ivsel_to_isolates(
                 row['Baseline mutations'],
                 default_gene=row['Gene'],
                 baseline_mutmap=refseq_mutmap,
-                refmap={}  # TODO: use Consensus B
+                refmap=refmap
             )
 
             if baseline_name not in refseq_mutmaps:
@@ -125,7 +127,7 @@ def ivsel_to_isolates(
                 row['Delta mutations'],
                 default_gene=row['Gene'],
                 baseline_mutmap=baseline_mutmap,
-                refmap={}  # TODO: use Consensus B
+                refmap=refmap
             )
             update_isolates(
                 isolates, row['IsolateName'], delta_mutmap)
@@ -143,13 +145,19 @@ def ivsel_to_isolates(
     '--baseline-csv',
     type=click.Path(exists=True, dir_okay=False),
     required=True)
+@click.option(
+    '--consensus-csv',
+    type=click.Path(exists=True, dir_okay=False),
+    required=True)
 def generate_ivsel_isolates(
     worksheet_dir: str,
     output_csv: str,
-    baseline_csv: str
+    baseline_csv: str,
+    consensus_csv: str
 ) -> None:
     click.echo(output_csv)
-    refseqs, renames = load_baseline(baseline_csv)
+    baseline_seqs, renames = load_baseline(baseline_csv)
+    refmap = load_consensus(consensus_csv)
     filenames = [
         os.path.join(worksheet_dir, fn)
         for fn in os.listdir(worksheet_dir)
@@ -157,7 +165,7 @@ def generate_ivsel_isolates(
     ]
     dump_csv(
         output_csv,
-        ivsel_to_isolates(filenames, refseqs, renames),
+        ivsel_to_isolates(filenames, baseline_seqs, renames, refmap),
         headers=[
             'IsolateName',
             'CA Mutations',

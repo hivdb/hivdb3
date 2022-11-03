@@ -47,7 +47,7 @@ def load_mutations(
             aas.add('del')
 
         if aas == {refmap.get(genepos)}:
-            mutmap.pop(genepos)
+            mutmap.pop(genepos, None)
         else:
             mutmap[genepos] = aas
     return mutmap
