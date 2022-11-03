@@ -5,9 +5,14 @@ TGT_INVITRO_SEL = $(addprefix payload/tables/invitro_selection/,$(notdir $(SRC_I
 payload/tables/invitro_selection/%-ivsel.csv: payload/worksheets/invitro_selection/%-ivsel.csv
 	@pipenv run python -m hivdb3.entry generate-invitro-selection $< $@
 
+payload/worksheets/isolates/invitro_selection_isolates.csv: $(DEPS) $(SRC_INVITRO_SEL) payload/worksheets/isolates/baseline_isolates.csv
+	@pipenv run python -m hivdb3.entry generate-ivsel-isolates \
+		payload/worksheets/invitro_selection $@ \
+		--baseline-csv payload/worksheets/isolates/baseline_isolates.csv
+
 $(TGT_INVITRO_SEL): $(DEPS) 
 
-payload: $(TGT_INVITRO_SEL)
+payload: $(TGT_INVITRO_SEL) payload/worksheets/isolates/invitro_selection_isolates.csv
 
 builder:
 	@docker build . -t hivdb/hivdb3-builder:latest
