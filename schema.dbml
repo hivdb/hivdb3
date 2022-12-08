@@ -211,6 +211,14 @@ Table invitro_selection_drugs as IVSelRx {
   ref_name varchar
   isolate_name varchar [ref: > Iso.isolate_name]
   drug_name varchar [ref: > D.drug_name]
+  concentration_cmp numeric_cmp_enum [default: '=']
+  concentration float
+  concentration_unit dosage_unit_enum 
+  concentration_unknown bool
+
+	indexes {
+		(ref_name, isolate_name, drug_name) [pk]
+	}
 }
 
 Ref: IVSelRx.(ref_name, isolate_name) > IVSel.(ref_name, isolate_name)
