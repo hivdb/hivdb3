@@ -9,19 +9,37 @@ $(TBDIR)/invitro_selection/%-ivsel.csv: $(WSDIR)/invitro_selection/%-ivsel.csv
 $(TGT_INVITRO_SEL): $(DEPS) 
 payload: $(TGT_INVITRO_SEL)
 
+TGT_IVSEL_DRUGS = $(addprefix $(TBDIR)/invitro_selection_drugs/,$(patsubst %-ivsel.csv,%-drugs.csv,$(notdir $(SRC_INVITRO_SEL))))
+$(TBDIR)/invitro_selection_drugs/%-drugs.csv: $(WSDIR)/invitro_selection/%-ivsel.csv
+	@pipenv run python -m hivdb3.entry generate-ivsel-drugs $< $@
+$(TGT_IVSEL_DRUGS): $(DEPS) 
+payload: $(TGT_IVSEL_DRUGS)
+
 TGT_IVSEL_ISO = $(WSDIR)/isolates/invitro_selection_isolates.csv
 $(TGT_IVSEL_ISO): $(WSDIR)/isolates/baseline_isolates.csv $(DEPS) $(SRC_INVITRO_SEL)
 	@pipenv run python -m hivdb3.entry generate-ivsel-isolates \
 		$(WSDIR)/invitro_selection $@ \
 		--baseline-csv $< \
 		--consensus-csv $(WSDIR)/hiv1_consensus.csv
-
 payload: $(TGT_IVSEL_ISO)
+
+SRC_ISOLATES = $(wildcard $(WSDIR)/isolates/*.csv)
+TGT_MUTATIONS = $(addprefix $(TBDIR)/mutations.d/,$(notdir $(SRC_ISOLATES)))
+$(TBDIR)/mutations.d/%.csv: $(WSDIR)/isolates/%.csv
+	@pipenv run python -m hivdb3.entry generate-mutations $< $@
+$(TGT_MUTATIONS): $(DEPS)
+payload: $(TGT_MUTATIONS)
 
 TGT_REFAA = $(TBDIR)/ref_amino_acid.csv
 $(TGT_REFAA): $(WSDIR)/hiv1_consensus.csv $(DEPS)
 	@pipenv run python -m hivdb3.entry generate-ref-amino-acid $< $@
 payload: $(TGT_REFAA)
+
+TGT_DRUGS = $(TBDIR)/drugs.csv
+$(TGT_DRUGS): $(DEPS) $(SRC_INVITRO_SEL)
+	@pipenv run python -m hivdb3.entry generate-drugs \
+		$(WSDIR)/invitro_selection $@
+payload: $(TGT_DRUGS)
 
 builder:
 	@docker build . -t hivdb/hivdb3-builder:latest

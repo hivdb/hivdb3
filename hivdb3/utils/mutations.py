@@ -25,6 +25,14 @@ def load_mutations(
     baseline_mutmap: Dict[GenePos, Set[str]] = {},
     refmap: Dict[GenePos, str] = {}
 ) -> Dict[GenePos, Set[str]]:
+    """
+    List of mutations -> dict lookup
+
+    @param: delta_mutations list of mutations from baseline strain
+    @param: default_gene default gene if gene is not come with a delta mutation
+    @param: baseline_mutmap dict of mutations from refseq of baseline strain
+    @param: refmap dict of reference (consensus B) amino acids
+    """
     mutmap: Dict[GenePos, Set[str]] = deepcopy(baseline_mutmap)
     for m in chain(*[
         MUTATION_PATTERN.finditer(delta)
@@ -47,6 +55,7 @@ def load_mutations(
             aas.add('del')
 
         if aas == {refmap.get(genepos)}:
+            # remove back mutations
             mutmap.pop(genepos, None)
         else:
             mutmap[genepos] = aas

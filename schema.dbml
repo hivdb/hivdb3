@@ -96,7 +96,8 @@ Table ref_amino_acid as RefAA {
 
 Table drug_classes as DClass {
   drug_class drug_class_enum [pk]
-  gene gene_enum
+  gene gene_enum [not null]
+  drug_class_full_name varchar [not null]
 
   indexes {
     gene
@@ -208,12 +209,8 @@ Enum concentration_unit_enum {
 
 Table invitro_selection_drugs as IVSelRx {
   ref_name varchar
-  experiment_name varchar
+  isolate_name varchar [ref: > Iso.isolate_name]
   drug_name varchar [ref: > D.drug_name]
-  concentration_cmp numeric_cmp_enum [default: '=']
-  concentration float
-  concentration_unit dosage_unit_enum 
-  concentration_unknown bool
 }
 
-Ref: IVSelRx.(ref_name, experiment_name) > IVSel.(ref_name, experiment_name)
+Ref: IVSelRx.(ref_name, isolate_name) > IVSel.(ref_name, isolate_name)
