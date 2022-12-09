@@ -23,6 +23,9 @@ def generate_mutations(input_worksheet: str, output_csv: str) -> None:
     isolates = load_csv(input_worksheet)
     records = []
     for row in isolates:
+        if row.get('CanonName'):
+            # skip synonyms
+            continue
         for gene in GENES:
             colname = f'{gene} Mutations'
             muts = row.get(colname)

@@ -30,6 +30,13 @@ $(TBDIR)/mutations.d/%.csv: $(WSDIR)/isolates/%.csv
 $(TGT_MUTATIONS): $(DEPS)
 payload: $(TGT_MUTATIONS)
 
+SRC_ISOLATES = $(wildcard $(WSDIR)/isolates/*.csv)
+TGT_ISOLATES = $(addprefix $(TBDIR)/isolates.d/,$(notdir $(SRC_ISOLATES)))
+$(TBDIR)/isolates.d/%.csv: $(WSDIR)/isolates/%.csv
+	@pipenv run python -m hivdb3.entry generate-isolates $< $@
+$(TGT_ISOLATES): $(DEPS)
+payload: $(TGT_ISOLATES)
+
 TGT_REFAA = $(TBDIR)/ref_amino_acid.csv
 $(TGT_REFAA): $(WSDIR)/hiv1_consensus.csv $(DEPS)
 	@pipenv run python -m hivdb3.entry generate-ref-amino-acid $< $@

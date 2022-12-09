@@ -5,6 +5,7 @@ from .commands import gen_ref_amino_acid
 from .commands import gen_drugs
 from .commands import gen_ivsel_drugs
 from .commands import gen_mutations
+from .commands import gen_isolates
 
 __all__ = [
     'cli',
@@ -13,7 +14,8 @@ __all__ = [
     'gen_ref_amino_acid',
     'gen_drugs',
     'gen_ivsel_drugs',
-    'gen_mutations'
+    'gen_mutations',
+    'gen_isolates'
 ]
 
 

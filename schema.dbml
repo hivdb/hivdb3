@@ -126,15 +126,12 @@ Enum isolate_type_enum {
 
 Table isolates as Iso {
   isolate_name varchar [pk, note: 'Isolate name']
-  isolate_date date [not null]
 
   genbank_accn varchar [
     note: 'Genbank accession number(s); comma delimited'
   ]
-  date_entered date [not null]
 
   indexes {
-    isolate_date
     genbank_accn
   }
 
