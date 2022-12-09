@@ -33,8 +33,8 @@ def generate_mutations(input_worksheet: str, output_csv: str) -> None:
                 continue
             mutlist = re.split(r'\s*\+\s*', muts)
             mutlookup = load_mutations(*mutlist, default_gene=gene)
-            for (_, pos), aas in mutlookup.items():
-                for aa in aas:
+            for (_, pos), aas in sorted(mutlookup.items()):
+                for aa in sorted(aas):
                     records.append({
                         'isolate_name': row['IsolateName'],
                         'gene': gene,
