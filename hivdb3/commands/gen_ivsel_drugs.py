@@ -8,9 +8,9 @@ from ..utils.csvv import load_csv, dump_csv, CSVWriterRow
 from .gen_invitro_selection import gen_isolate_names
 
 VALID_UNITS = {
-    'um': '\u00b5m',  # use micro symbol "µ" not greek letter "μ"
-    '\u03bcm': '\u00b5m',
-    '\u00b5m': '\u00b5m',
+    'um': '\u00b5M',  # use micro symbol "µ" not greek letter "μ"
+    '\u03bcm': '\u00b5M',
+    '\u00b5m': '\u00b5M',
     'pm': 'pM',
     'nm': 'nM',
     'ng/ml': 'ng/ml'

@@ -40,6 +40,7 @@ Enum drug_class_enum {
   CAI
   PI
   NRTI
+  NRTTI
   NNRTI
   INSTI
 }
@@ -120,34 +121,27 @@ Table drugs as D {
 }
 
 
-Enum isolate_type_enum {
-  mutations [note: 'The isolate is stored in mutation format']
-}
-
 Table isolates as Iso {
   isolate_name varchar [pk, note: 'Isolate name']
+
+  Note: 'Core isolate table'
+}
+
+
+Table gene_isolates as GIso {
+  isolate_name varchar [ref: > Iso.isolate_name, note: 'Isolate name']
+  gene gene_enum
 
   genbank_accn varchar [
     note: 'Genbank accession number(s); comma delimited'
   ]
 
   indexes {
-    genbank_accn
+    (isolate_name, gene) [pk]
+    (gene, genbank_accn) [unique]
   }
 
-  Note: 'Core isolate table'
-}
-
-Table ref_isolates as RefLink {
-  ref_name varchar [ref: > Ref.ref_name]
-  isolate_name varchar [ref: > Iso.isolate_name]
-  is_primary bool [
-    note: 'If this link is the primary linkage between ref and iso'
-  ]
-
-  indexes {
-    (ref_name, isolate_name) [pk]
-  }
+  Note: 'Core gene isolate table'
 }
 
 Table mutations as IsoMut {
@@ -164,6 +158,7 @@ Table mutations as IsoMut {
 
   Note: 'Isolate mutation lookup table'
 }
+Ref: IsoMut.(isolate_name, gene) > GIso.(isolate_name, gene)
 
 
 Enum time_unit_enum {
@@ -177,14 +172,14 @@ Enum time_unit_enum {
 Table invitro_selection as IVSel {
   ref_name varchar [ref: > Ref.ref_name]
   isolate_name varchar [ref: > Iso.isolate_name]
-  baseline_isolate_name varchar [ref: > Iso.isolate_name]
+  baseline_isolate_name varchar
   cell_line varchar
   experiment varchar
   passage_cmp numeric_cmp_enum [default: '=']
   passage int
   passage_unknown bool
   cumulative_culture_time_cmp numeric_cmp_enum [default: '=']
-  cumulative_culture_time int
+  cumulative_culture_time numeric(5,1)
   cumulative_culture_time_unit time_unit_enum
   cumulative_culture_time_unknown bool
   section varchar [
@@ -209,8 +204,8 @@ Table invitro_selection_drugs as IVSelRx {
   isolate_name varchar [ref: > Iso.isolate_name]
   drug_name varchar [ref: > D.drug_name]
   concentration_cmp numeric_cmp_enum [default: '=']
-  concentration float
-  concentration_unit dosage_unit_enum 
+  concentration numeric(10,3)
+  concentration_unit concentration_unit_enum 
   concentration_unknown bool
 
 	indexes {
@@ -219,3 +214,9 @@ Table invitro_selection_drugs as IVSelRx {
 }
 
 Ref: IVSelRx.(ref_name, isolate_name) > IVSel.(ref_name, isolate_name)
+
+
+Table last_update {
+  scope varchar [pk]
+  last_update timestamptz [not null]
+}

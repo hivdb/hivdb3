@@ -6,6 +6,7 @@ from .commands import gen_drugs
 from .commands import gen_ivsel_drugs
 from .commands import gen_mutations
 from .commands import gen_isolates
+from .commands import gen_gene_isolates
 
 __all__ = [
     'cli',
@@ -15,7 +16,8 @@ __all__ = [
     'gen_drugs',
     'gen_ivsel_drugs',
     'gen_mutations',
-    'gen_isolates'
+    'gen_isolates',
+    'gen_gene_isolates'
 ]
 
 

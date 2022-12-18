@@ -35,6 +35,10 @@ def generate_mutations(input_worksheet: str, output_csv: str) -> None:
             mutlookup = load_mutations(*mutlist, default_gene=gene)
             for (_, pos), aas in sorted(mutlookup.items()):
                 for aa in sorted(aas):
+                    aa = (aa
+                          .replace('-', 'del')
+                          .replace('_', 'ins')
+                          .replace('*', 'stop'))
                     records.append({
                         'isolate_name': row['IsolateName'],
                         'gene': gene,

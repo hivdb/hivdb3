@@ -14,13 +14,12 @@ GENES = ['PR', 'RT', 'IN', 'CA']
 @click.argument(
     'output_csv',
     type=click.Path(dir_okay=False))
-def generate_isolates(input_worksheet: str, output_csv: str) -> None:
+def generate_gene_isolates(input_worksheet: str, output_csv: str) -> None:
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     click.echo(output_csv)
 
     isolates = load_csv(input_worksheet)
     records = []
-    unique_isolates = set()
     for idx, row in enumerate(isolates):
         if row.get('CanonName'):
             # skip synonyms
@@ -30,13 +29,16 @@ def generate_isolates(input_worksheet: str, output_csv: str) -> None:
             click.echo("'IsolateName' is missing at row {}"
                        .format(idx + 2), err=True)
             raise click.Abort()
-        if isoname not in unique_isolates:
-            records.append({
-                'isolate_name': isoname
-            })
-            unique_isolates.add(isoname)
+        for gene in GENES:
+            gene_muts = row.get(f'{gene} Mutations')
+            if gene_muts and gene_muts != 'NA':
+                records.append({
+                    'isolate_name': isoname,
+                    'gene': gene,
+                    'genbank_accn': row.get('Genbank') or None
+                })
     dump_csv(
         output_csv,
         records,
-        ['isolate_name']
+        ['isolate_name', 'gene', 'genbank_accn']
     )

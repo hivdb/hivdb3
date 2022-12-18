@@ -1,4 +1,4 @@
-DEPS = $(wildcard hivdb3/*.py) $(wildcard hivdb3/*/*.py)
+DEPS = $(wildcard hivdb3/*.py hivdb3/*/*.py)
 WSDIR = payload/worksheets
 TBDIR = payload/tables
 
@@ -37,6 +37,13 @@ $(TBDIR)/isolates.d/%.csv: $(WSDIR)/isolates/%.csv
 $(TGT_ISOLATES): $(DEPS)
 payload: $(TGT_ISOLATES)
 
+SRC_ISOLATES = $(wildcard $(WSDIR)/isolates/*.csv)
+TGT_GENE_ISOLATES = $(addprefix $(TBDIR)/gene_isolates.d/,$(notdir $(SRC_ISOLATES)))
+$(TBDIR)/gene_isolates.d/%.csv: $(WSDIR)/isolates/%.csv
+	@pipenv run python -m hivdb3.entry generate-gene-isolates $< $@
+$(TGT_GENE_ISOLATES): $(DEPS)
+payload: $(TGT_GENE_ISOLATES)
+
 TGT_REFAA = $(TBDIR)/ref_amino_acid.csv
 $(TGT_REFAA): $(WSDIR)/hiv1_consensus.csv $(DEPS)
 	@pipenv run python -m hivdb3.entry generate-ref-amino-acid $< $@
@@ -48,6 +55,16 @@ $(TGT_DRUGS): $(DEPS) $(SRC_INVITRO_SEL)
 		$(WSDIR)/invitro_selection $@
 payload: $(TGT_DRUGS)
 
+TGT = $(TGT_INVITRO_SEL) $(TGT_IVSEL_DRUGS) $(TGT_IVSEL_ISO) $(TGT_MUTATIONS) $(TGT_ISOLATES) $(TGT_GENE_ISOLATES) $(TGT_REFAA) $(TGT_DRUGS)
+
+build/sqls: scripts/export-sqls.sh schema.dbml $(wildcard constraints_pre-import/*.sql derived_tables/*.sql constraints_post-import/*.sql $(TBDIR)/*.csv $(TBDIR)/*/*.csv $(TBDIR)/*/*/*.csv) $(TGT)
+	@docker run \
+		--rm -it \
+		--volume=$(shell pwd):/hivdb3/ \
+		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
+		hivdb/hivdb3-builder:latest \
+		scripts/export-sqls.sh
+
 builder:
 	@docker build . -t hivdb/hivdb3-builder:latest
 
@@ -55,7 +72,7 @@ docker-envfile:
 	@test -f docker-envfile || (echo "Config file 'docker-envfile' not found, use 'docker-envfile.example' as a template to create it." && false)
 
 update-builder:
-	@docker pull hivdb/hivdb3-builder:latest > /dev/null
+	#@docker pull hivdb/hivdb3-builder:latest > /dev/null
 
 inspect-builder: docker-envfile
 	@docker run --rm -it \
@@ -137,15 +154,8 @@ sync-to-s3: update-builder docker-envfile
    		hivdb/hivdb3-builder:latest \
 		scripts/sync-to-s3.sh
 
-devdb: update-builder
-	@docker run \
-		--rm -it \
-		--volume=$(shell pwd):/hivdb3/ \
-		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
-		hivdb/hivdb3-builder:latest \
-		scripts/export-sqls.sh
+devdb: update-builder build/sqls
 	$(eval volumes = $(shell docker inspect -f '{{ range .Mounts }}{{ .Name }}{{ end }}' hivdb3-devdb))
-	@mkdir -p local/sqls
 	@docker rm -f hivdb3-devdb 2>/dev/null || true
 	@docker volume rm $(volumes) 2>/dev/null || true
 	@docker run \
@@ -153,7 +163,7 @@ devdb: update-builder
 		-e POSTGRES_HOST_AUTH_METHOD=trust \
 		-p 127.0.0.1:6547:5432 \
 		--volume=$(shell pwd)/postgresql.conf:/etc/postgresql/postgresql.conf \
-		--volume=$(shell pwd)/local/sqls:/docker-entrypoint-initdb.d \
+		--volume=$(shell pwd)/build/sqls:/docker-entrypoint-initdb.d \
 		postgres:13.1 \
 		-c 'config_file=/etc/postgresql/postgresql.conf'
 
