@@ -1,4 +1,4 @@
-Table references as Ref {
+Table articles as Ref {
   ref_name varchar [
     pk,
     note: 'Manually assigned reference name'

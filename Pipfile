@@ -6,6 +6,10 @@ name = "pypi"
 [packages]
 click = "*"
 more-itertools = "*"
+sqlalchemy = "*"
+sqlite-utils = "*"
+psycopg2-binary = "*"
+sqlalchemy-stubs = "*"
 
 [dev-packages]
 mypy = "*"

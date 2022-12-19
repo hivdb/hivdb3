@@ -65,7 +65,13 @@ build/sqls: scripts/export-sqls.sh schema.dbml $(wildcard constraints_pre-import
 		hivdb/hivdb3-builder:latest \
 		scripts/export-sqls.sh
 
-builder:
+requirements.txt: Pipfile Pipfile.lock
+	@pipenv lock -r > $@
+
+network:
+	@docker network create -d bridge hivdb3-network 2>/dev/null || true
+
+builder: requirements.txt
 	@docker build . -t hivdb/hivdb3-builder:latest
 
 docker-envfile:
@@ -74,76 +80,50 @@ docker-envfile:
 update-builder:
 	#@docker pull hivdb/hivdb3-builder:latest > /dev/null
 
-inspect-builder: docker-envfile
+inspect-builder: update-builder network docker-envfile
 	@docker run --rm -it \
 		--volume=$(shell pwd):/hivdb3/ \
 		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
 		--volume ~/.aws:/root/.aws:ro \
+		--network=hivdb3-network \
 		--env-file ./docker-envfile \
    		hivdb/hivdb3-builder:latest /bin/bash
 
 release-builder:
 	@docker push hivdb/hivdb3-builder:latest
 
-autofill: update-builder
-	@docker run --rm -it \
-		--volume=$(shell pwd):/hivdb3/ \
-		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
-   		hivdb/hivdb3-builder:latest \
-		pipenv run python -m drdb.entry autofill-payload payload/
-
-local-release: update-builder docker-envfile
+local-release: update-builder network docker-envfile
 	@docker run --rm -it \
 		--shm-size=1536m \
 		--volume=$(shell pwd):/hivdb3/ \
 		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
 		--volume ~/.aws:/root/.aws:ro \
+		--network=hivdb3-network \
 		--env-file ./docker-envfile \
    		hivdb/hivdb3-builder:latest \
 		scripts/export-sqlite.sh local
 
-release: update-builder docker-envfile
+release: update-builder network docker-envfile
 	@docker run --rm -it \
 		--shm-size=1536m \
 		--volume=$(shell pwd):/hivdb3/ \
 		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
 		--volume ~/.aws:/root/.aws:ro \
+		--network=hivdb3-network \
 		--env-file ./docker-envfile \
    		hivdb/hivdb3-builder:latest \
 		scripts/github-release.sh
 
-pre-release: update-builder docker-envfile
+pre-release: update-builder network docker-envfile
 	@docker run --rm -it \
 		--shm-size=1536m \
 		--volume=$(shell pwd):/hivdb3/ \
 		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
 		--volume ~/.aws:/root/.aws:ro \
+		--network=hivdb3-network \
 		--env-file ./docker-envfile \
    		hivdb/hivdb3-builder:latest \
 		scripts/github-release.sh --pre-release
-
-reflist ?= ""
-import-from-hivdb: update-builder docker-envfile
-	@docker run --rm -it \
-		--volume=$(shell pwd):/hivdb3/ \
-		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
-		--env-file ./docker-envfile \
-   		hivdb/hivdb3-builder:latest \
-		scripts/import-from-hivdb.sh ${reflist}
-
-sync-from-cpr: update-builder
-	@docker run --rm -it \
-		--volume=$(shell pwd):/hivdb3/ \
-		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
-   		hivdb/hivdb3-builder:latest \
-		scripts/sync-from-cpr.sh
-
-sync-surv-mutations: update-builder
-	@docker run --rm -it \
-		--volume=$(shell pwd):/hivdb3/ \
-		--volume=$(shell dirname $$(pwd))/hivdb3-payload:/hivdb3-payload \
-   		hivdb/hivdb3-builder:latest \
-		scripts/sync-surv-mutations.sh
 
 sync-to-s3: update-builder docker-envfile
 	@docker run --rm -it \
@@ -154,7 +134,7 @@ sync-to-s3: update-builder docker-envfile
    		hivdb/hivdb3-builder:latest \
 		scripts/sync-to-s3.sh
 
-devdb: update-builder build/sqls
+devdb: update-builder network build/sqls
 	$(eval volumes = $(shell docker inspect -f '{{ range .Mounts }}{{ .Name }}{{ end }}' hivdb3-devdb))
 	@docker rm -f hivdb3-devdb 2>/dev/null || true
 	@docker volume rm $(volumes) 2>/dev/null || true
@@ -164,6 +144,7 @@ devdb: update-builder build/sqls
 		-p 127.0.0.1:6547:5432 \
 		--volume=$(shell pwd)/postgresql.conf:/etc/postgresql/postgresql.conf \
 		--volume=$(shell pwd)/build/sqls:/docker-entrypoint-initdb.d \
+		--network=hivdb3-network \
 		postgres:13.1 \
 		-c 'config_file=/etc/postgresql/postgresql.conf'
 

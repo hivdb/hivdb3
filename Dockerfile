@@ -15,5 +15,6 @@ RUN apt-get install -qy nodejs
 RUN npm install --location=global @dbml/cli
 RUN curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip && \
     unzip awscliv2.zip && aws/install && rm -rf awscliv2.zip aws
-RUN pip install psycopg2-binary db-to-sqlite
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 RUN mkdir -p /local

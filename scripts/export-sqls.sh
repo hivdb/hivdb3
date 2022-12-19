@@ -42,7 +42,7 @@ EOF
 done
 echo "$EXPOSE_DIR/01_schema.sql"
 
-copy_csv payload/tables/references.csv references >> $TARGET_DIR/02_data_tables.sql
+copy_csv payload/tables/articles.csv articles >> $TARGET_DIR/02_data_tables.sql
 copy_csv payload/tables/ref_amino_acid.csv ref_amino_acid >> $TARGET_DIR/02_data_tables.sql
 copy_csv payload/tables/drug_classes.csv drug_classes >> $TARGET_DIR/02_data_tables.sql
 copy_csv payload/tables/drugs.csv drugs >> $TARGET_DIR/02_data_tables.sql
