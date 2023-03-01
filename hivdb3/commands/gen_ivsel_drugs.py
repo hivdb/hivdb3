@@ -5,7 +5,7 @@ import click
 from ..cli import cli
 from ..utils.csvv import load_csv, dump_csv, CSVWriterRow
 
-from .gen_invitro_selection import gen_isolate_names
+from .gen_invitro_selection import gen_isolate_names, load_baseline
 
 VALID_UNITS = {
     'um': '\u00b5M',  # use micro symbol "µ" not greek letter "μ"
@@ -39,7 +39,16 @@ def norm_unit(unit: str) -> str:
 @click.argument(
     'output_csv',
     type=click.Path(dir_okay=False))
-def generate_ivsel_drugs(input_worksheet: str, output_csv: str) -> None:
+@click.option(
+    '--baseline-csv',
+    type=click.Path(exists=True, dir_okay=False),
+    required=True)
+def generate_ivsel_drugs(
+    input_worksheet: str,
+    output_csv: str,
+    baseline_csv: str
+) -> None:
+    _, renames = load_baseline(baseline_csv)
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     click.echo(output_csv)
 
@@ -47,7 +56,7 @@ def generate_ivsel_drugs(input_worksheet: str, output_csv: str) -> None:
     rows = load_csv(input_worksheet)
     results = {}
     # Process each row in the input worksheet
-    for idx, row in enumerate(gen_isolate_names(rows)):
+    for idx, row in enumerate(gen_isolate_names(rows, renames)):
         regimen = row.get('Regimen')
         concentration = row.get('Concentration')
         if not regimen:

@@ -172,7 +172,7 @@ Enum time_unit_enum {
 Table invitro_selection as IVSel {
   ref_name varchar [ref: > Ref.ref_name]
   isolate_name varchar [ref: > Iso.isolate_name]
-  baseline_isolate_name varchar
+  baseline_isolate_name varchar [ref: > Iso.isolate_name]
   cell_line varchar
   experiment varchar
   passage_cmp numeric_cmp_enum [default: '=']
@@ -220,3 +220,19 @@ Table last_update {
   scope varchar [pk]
   last_update timestamptz [not null]
 }
+
+Table invitro_selected_mutations as IVSelMut {
+  ref_name varchar
+  isolate_name varchar [ref: > Iso.isolate_name]
+  gene gene_enum
+  position int
+  amino_acid amino_acid_enum
+
+  indexes {
+    (ref_name, isolate_name, gene, position, amino_acid) [pk]
+  }
+
+  Note: 'Derived table for storing selected mutations from in vitro experiments'
+}
+
+Ref: IVSelMut.(ref_name, isolate_name) > IVSel.(ref_name, isolate_name)

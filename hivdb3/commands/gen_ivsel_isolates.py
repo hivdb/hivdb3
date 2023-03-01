@@ -1,12 +1,12 @@
 import os
 import click
-from typing import List, Iterable, Dict, Set, Tuple
+from typing import List, Iterable, Dict, Set
 
 from ..cli import cli
 from ..utils.csvv import load_csv, dump_csv, CSVReaderRow, CSVWriterRow
 from ..utils.mutations import load_mutations, dump_mutations, GenePos
 
-from .gen_invitro_selection import gen_isolate_names
+from .gen_invitro_selection import gen_isolate_names, load_baseline
 from .gen_ref_amino_acid import load_consensus
 
 
@@ -29,37 +29,6 @@ def update_isolates(
         )
 
 
-def load_baseline(baseline_csv: str) -> Tuple[
-    Dict[str, Dict[GenePos, Set[str]]],
-    Dict[str, str]
-]:
-    lookup: Dict[str, Dict[GenePos, Set[str]]] = {}
-    renames: Dict[str, str] = {}
-    rows = load_csv(baseline_csv)
-    for idx, row in enumerate(rows):
-        if row['IsolateName'] is None:
-            click.echo("({}) 'IsolateName' is empty at row {}"
-                       .format(baseline_csv, idx + 2), err=True)
-            raise click.Abort()
-        if row['CanonName']:
-            renames[row['IsolateName']] = row['CanonName']
-            continue
-        iso_name = row['IsolateName']
-        if iso_name not in lookup:
-            lookup[iso_name] = {}
-        for gene in ('CA', 'PR', 'RT', 'IN'):
-            genemuts = row[f'{gene} Mutations']
-            if genemuts is None:
-                click.echo("({}) '{} Mutations' is empty at row {}"
-                           .format(baseline_csv, gene, idx + 2),
-                           err=True)
-                raise click.Abort()
-            lookup[iso_name].update(
-                load_mutations(genemuts, default_gene=gene)
-            )
-    return lookup, renames
-
-
 def ivsel_to_isolates(
     filenames: List[str],
     refseq_mutmaps: Dict[str, Dict[GenePos, Set[str]]],
@@ -70,7 +39,7 @@ def ivsel_to_isolates(
 
     for filename in filenames:
         rows: List[CSVReaderRow] = load_csv(filename)
-        for idx, row in enumerate(gen_isolate_names(rows)):
+        for idx, row in enumerate(gen_isolate_names(rows, renames)):
             if row['IsolateName'] is None:
                 raise RuntimeError(
                     "'IsolateName' is empty, "

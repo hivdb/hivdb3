@@ -4,14 +4,14 @@ TBDIR = payload/tables
 
 SRC_INVITRO_SEL = $(wildcard $(WSDIR)/invitro_selection/*.csv)
 TGT_INVITRO_SEL = $(addprefix $(TBDIR)/invitro_selection/,$(notdir $(SRC_INVITRO_SEL)))
-$(TBDIR)/invitro_selection/%-ivsel.csv: $(WSDIR)/invitro_selection/%-ivsel.csv
-	@pipenv run python -m hivdb3.entry generate-invitro-selection $< $@
+$(TBDIR)/invitro_selection/%-ivsel.csv: $(WSDIR)/invitro_selection/%-ivsel.csv $(WSDIR)/isolates/baseline_isolates.csv
+	@pipenv run python -m hivdb3.entry generate-invitro-selection $< $@ --baseline-csv $(word 2,$^)
 $(TGT_INVITRO_SEL): $(DEPS) 
 payload: $(TGT_INVITRO_SEL)
 
 TGT_IVSEL_DRUGS = $(addprefix $(TBDIR)/invitro_selection_drugs/,$(patsubst %-ivsel.csv,%-drugs.csv,$(notdir $(SRC_INVITRO_SEL))))
-$(TBDIR)/invitro_selection_drugs/%-drugs.csv: $(WSDIR)/invitro_selection/%-ivsel.csv
-	@pipenv run python -m hivdb3.entry generate-ivsel-drugs $< $@
+$(TBDIR)/invitro_selection_drugs/%-drugs.csv: $(WSDIR)/invitro_selection/%-ivsel.csv $(WSDIR)/isolates/baseline_isolates.csv
+	@pipenv run python -m hivdb3.entry generate-ivsel-drugs $< $@ --baseline-csv $(word 2,$^)
 $(TGT_IVSEL_DRUGS): $(DEPS) 
 payload: $(TGT_IVSEL_DRUGS)
 

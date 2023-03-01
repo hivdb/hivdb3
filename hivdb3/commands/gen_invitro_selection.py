@@ -1,12 +1,47 @@
 import re
 import click
-from typing import List, Iterable, Tuple, Dict, Optional
+from typing import List, Iterable, Tuple, Dict, Optional, Set
 
 from ..cli import cli
+from ..utils.mutations import load_mutations, GenePos
 from ..utils.csvv import load_csv, dump_csv, CSVReaderRow, CSVWriterRow
 
 
-def gen_isolate_names(rows: List[CSVReaderRow]) -> Iterable[CSVReaderRow]:
+def load_baseline(baseline_csv: str) -> Tuple[
+    Dict[str, Dict[GenePos, Set[str]]],
+    Dict[str, str]
+]:
+    lookup: Dict[str, Dict[GenePos, Set[str]]] = {}
+    renames: Dict[str, str] = {}
+    rows = load_csv(baseline_csv)
+    for idx, row in enumerate(rows):
+        if row['IsolateName'] is None:
+            click.echo("({}) 'IsolateName' is empty at row {}"
+                       .format(baseline_csv, idx + 2), err=True)
+            raise click.Abort()
+        if row['CanonName']:
+            renames[row['IsolateName']] = row['CanonName']
+            continue
+        iso_name = row['IsolateName']
+        if iso_name not in lookup:
+            lookup[iso_name] = {}
+        for gene in ('CA', 'PR', 'RT', 'IN'):
+            genemuts = row[f'{gene} Mutations']
+            if genemuts is None:
+                click.echo("({}) '{} Mutations' is empty at row {}"
+                           .format(baseline_csv, gene, idx + 2),
+                           err=True)
+                raise click.Abort()
+            lookup[iso_name].update(
+                load_mutations(genemuts, default_gene=gene)
+            )
+    return lookup, renames
+
+
+def gen_isolate_names(
+    rows: List[CSVReaderRow],
+    renames: Dict[str, str]
+) -> Iterable[CSVReaderRow]:
     optional_key_columns = [
         ('Cell line', ''),
         ('Strain', ''),
@@ -19,6 +54,8 @@ def gen_isolate_names(rows: List[CSVReaderRow]) -> Iterable[CSVReaderRow]:
     essential_key_columns: List[str] = []
     keys: Dict[Tuple[str, ...], int] = {}
     for idx, row in enumerate(rows):
+        if row['Strain'] in renames:
+            row['Strain'] = renames[row['Strain']]
         key = tuple(
             prefix + (row[col] or '')
             for col, prefix in optional_key_columns
@@ -101,8 +138,12 @@ def is_unknown(value: str) -> bool:
     return value.lower() == 'unknown'
 
 
-def worksheet_to_table(rows: List[CSVReaderRow]) -> Iterable[CSVWriterRow]:
-    for idx, row in enumerate(gen_isolate_names(rows)):
+def worksheet_to_table(
+    rows: List[CSVReaderRow],
+    renames: Dict[str, str]
+) -> Iterable[CSVWriterRow]:
+
+    for idx, row in enumerate(gen_isolate_names(rows, renames)):
         if row['Strain'] is None:
             click.echo("'Strain' is empty at row {}"
                        .format(idx + 2), err=True)
@@ -168,12 +209,21 @@ def worksheet_to_table(rows: List[CSVReaderRow]) -> Iterable[CSVWriterRow]:
 @click.argument(
     'output_csv',
     type=click.Path(dir_okay=False))
-def generate_invitro_selection(input_worksheet: str, output_csv: str) -> None:
+@click.option(
+    '--baseline-csv',
+    type=click.Path(exists=True, dir_okay=False),
+    required=True)
+def generate_invitro_selection(
+    input_worksheet: str,
+    output_csv: str,
+    baseline_csv: str
+) -> None:
     click.echo(output_csv)
+    _, renames = load_baseline(baseline_csv)
     rows = load_csv(input_worksheet)
     dump_csv(
         output_csv,
-        worksheet_to_table(rows),
+        worksheet_to_table(rows, renames),
         headers=[
             'ref_name',
             'isolate_name',
