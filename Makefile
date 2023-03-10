@@ -16,11 +16,12 @@ $(TGT_IVSEL_DRUGS): $(DEPS)
 payload: $(TGT_IVSEL_DRUGS)
 
 TGT_IVSEL_ISO = $(WSDIR)/isolates/invitro_selection_isolates.csv
-$(TGT_IVSEL_ISO): $(WSDIR)/isolates/baseline_isolates.csv $(DEPS) $(SRC_INVITRO_SEL)
+$(TGT_IVSEL_ISO): $(WSDIR)/isolates/baseline_isolates.csv $(WSDIR)/isolate_extracols.csv $(DEPS) $(SRC_INVITRO_SEL)
 	@pipenv run python -m hivdb3.entry generate-ivsel-isolates \
 		$(WSDIR)/invitro_selection $@ \
 		--baseline-csv $< \
-		--consensus-csv $(WSDIR)/hiv1_consensus.csv
+		--consensus-csv $(WSDIR)/hiv1_consensus.csv \
+		--isolate-extracols-csv $(word 2,$^)
 payload: $(TGT_IVSEL_ISO)
 
 SRC_ISOLATES = $(wildcard $(WSDIR)/isolates/*.csv)

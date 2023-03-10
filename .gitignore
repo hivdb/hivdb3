@@ -2,6 +2,7 @@
 docker-envfile
 
 *.swp
+*.swo
 *.orig
 *.log
 DS_Store

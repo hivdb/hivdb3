@@ -30,13 +30,15 @@ def generate_isolates(input_worksheet: str, output_csv: str) -> None:
             click.echo("'IsolateName' is missing at row {}"
                        .format(idx + 2), err=True)
             raise click.Abort()
+        subtype = row.get('Subtype')
         if isoname not in unique_isolates:
             records.append({
-                'isolate_name': isoname
+                'isolate_name': isoname,
+                'subtype': subtype
             })
             unique_isolates.add(isoname)
     dump_csv(
         output_csv,
         records,
-        ['isolate_name']
+        ['isolate_name', 'subtype']
     )

@@ -13,12 +13,15 @@ from .gen_ref_amino_acid import load_consensus
 def update_isolates(
     isolates: Dict[str, CSVWriterRow],
     isolate_name: str,
-    mutmap: Dict[GenePos, Set[str]]
+    mutmap: Dict[GenePos, Set[str]],
+    extracols: Dict[str, CSVReaderRow]
 ) -> None:
     if isolate_name not in isolates:
         isolates[isolate_name] = {
-            'IsolateName': isolate_name,
             '_mutmap': mutmap,
+            **extracols.get(isolate_name, {
+                'IsolateName': isolate_name
+            }),
             **dump_mutations(mutmap)
         }
     else:
@@ -33,7 +36,8 @@ def ivsel_to_isolates(
     filenames: List[str],
     refseq_mutmaps: Dict[str, Dict[GenePos, Set[str]]],
     renames: Dict[str, str],
-    refmap: Dict[GenePos, str]
+    refmap: Dict[GenePos, str],
+    extracols: Dict[str, CSVReaderRow]
 ) -> Iterable[CSVWriterRow]:
     isolates: Dict[str, CSVWriterRow] = {}
 
@@ -90,7 +94,7 @@ def ivsel_to_isolates(
 
             if baseline_name not in refseq_mutmaps:
                 update_isolates(
-                    isolates, baseline_name, baseline_mutmap)
+                    isolates, baseline_name, baseline_mutmap, extracols)
 
             delta_mutmap = load_mutations(
                 row['Delta mutations'],
@@ -99,8 +103,20 @@ def ivsel_to_isolates(
                 refmap=refmap
             )
             update_isolates(
-                isolates, row['IsolateName'], delta_mutmap)
+                isolates, row['IsolateName'], delta_mutmap, extracols)
     return isolates.values()
+
+
+def load_extracols(filename: str) -> Dict[str, CSVReaderRow]:
+    extracols: Dict[str, CSVReaderRow] = {}
+    for row in load_csv(filename):
+        if row['IsolateName'] is None:
+            raise RuntimeError(
+                "'IsolateName' in {} can not be empty"
+                .format(filename)
+            )
+        extracols[row['IsolateName']] = row
+    return extracols
 
 
 @cli.command()
@@ -118,15 +134,21 @@ def ivsel_to_isolates(
     '--consensus-csv',
     type=click.Path(exists=True, dir_okay=False),
     required=True)
+@click.option(
+    '--isolate-extracols-csv',
+    type=click.Path(exists=True, dir_okay=False),
+    required=False)
 def generate_ivsel_isolates(
     worksheet_dir: str,
     output_csv: str,
     baseline_csv: str,
-    consensus_csv: str
+    consensus_csv: str,
+    isolate_extracols_csv: str
 ) -> None:
     click.echo(output_csv)
     baseline_seqs, renames = load_baseline(baseline_csv)
     refmap = load_consensus(consensus_csv)
+    extracols: Dict[str, CSVReaderRow] = load_extracols(isolate_extracols_csv)
     filenames = [
         os.path.join(worksheet_dir, fn)
         for fn in os.listdir(worksheet_dir)
@@ -134,9 +156,12 @@ def generate_ivsel_isolates(
     ]
     dump_csv(
         output_csv,
-        ivsel_to_isolates(filenames, baseline_seqs, renames, refmap),
+        ivsel_to_isolates(filenames, baseline_seqs,
+                          renames, refmap, extracols),
         headers=[
             'IsolateName',
+            'Subtype',
+            'Genbank',
             'CA Mutations',
             'PR Mutations',
             'RT Mutations',

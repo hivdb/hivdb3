@@ -123,6 +123,7 @@ Table drugs as D {
 
 Table isolates as Iso {
   isolate_name varchar [pk, note: 'Isolate name']
+  subtype varchar [note: 'Subtype']
 
   Note: 'Core isolate table'
 }
