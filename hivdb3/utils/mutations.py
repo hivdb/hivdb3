@@ -33,6 +33,7 @@ def load_mutations(
     @param: baseline_mutmap dict of mutations from refseq of baseline strain
     @param: refmap dict of reference (consensus B) amino acids
     """
+    mentioned_genes = {default_gene}
     mutmap: Dict[GenePos, Set[str]] = deepcopy(baseline_mutmap)
     for m in chain(*[
         MUTATION_PATTERN.finditer(delta)
@@ -45,6 +46,7 @@ def load_mutations(
             named['gene'] or default_gene,
             int(named['pos'])
         )
+        mentioned_genes.add(genepos[0])
         aas: Set[str] = set(named['aas']
                             .replace('/', '')
                             .replace('ins', '')
@@ -59,6 +61,10 @@ def load_mutations(
             mutmap.pop(genepos, None)
         else:
             mutmap[genepos] = aas
+    # remove mutations from other genes
+    for genepos in list(mutmap.keys()):
+        if genepos[0] not in mentioned_genes:
+            mutmap.pop(genepos)
     return mutmap
 
 
