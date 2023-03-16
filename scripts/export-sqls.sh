@@ -46,6 +46,7 @@ copy_csv payload/tables/articles.csv articles >> $TARGET_DIR/02_data_tables.sql
 copy_csv payload/tables/ref_amino_acid.csv ref_amino_acid >> $TARGET_DIR/02_data_tables.sql
 copy_csv payload/tables/drug_classes.csv drug_classes >> $TARGET_DIR/02_data_tables.sql
 copy_csv payload/tables/drugs.csv drugs >> $TARGET_DIR/02_data_tables.sql
+copy_csv payload/tables/resistance_mutations.csv resistance_mutations >> $TARGET_DIR/02_data_tables.sql
 
 ls -1 payload/tables/isolates.d/*.csv | while read filepath; do
   copy_csv $filepath isolates >> $TARGET_DIR/02_data_tables.sql

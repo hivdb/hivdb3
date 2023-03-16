@@ -95,6 +95,26 @@ Table ref_amino_acid as RefAA {
   }
 }
 
+Table resistance_mutations as DRM {
+  drug_class drug_class_enum [
+    note: 'Drug class'
+  ]
+  gene gene_enum [
+    note: 'Mutation gene'
+  ]
+  position int [
+    note: 'Position'
+  ]
+  amino_acid amino_acid_enum [
+    note: 'Amino acid'
+  ]
+
+  indexes {
+    (drug_class, gene, position, amino_acid) [pk]
+    (gene, position, amino_acid)
+  }
+}
+
 Table drug_classes as DClass {
   drug_class drug_class_enum [pk]
   gene gene_enum [not null]
@@ -222,12 +242,31 @@ Table last_update {
   last_update timestamptz [not null]
 }
 
+
+Table invitro_selection_baseline_drms as IVSelBDRMs {
+  ref_name varchar
+  isolate_name varchar [ref: > Iso.isolate_name]
+  gene gene_enum
+  position int
+  amino_acid amino_acid_enum
+
+  indexes {
+    (ref_name, isolate_name, gene, position, amino_acid) [pk]
+  }
+
+  Note: 'Derived table for storing baseline DRMs of in vitro experiments'
+}
+
+Ref: IVSelBDRMs.(ref_name, isolate_name) > IVSel.(ref_name, isolate_name)
+
+
 Table invitro_selected_mutations as IVSelMut {
   ref_name varchar
   isolate_name varchar [ref: > Iso.isolate_name]
   gene gene_enum
   position int
   amino_acid amino_acid_enum
+  is_baseline_drm bool
 
   indexes {
     (ref_name, isolate_name, gene, position, amino_acid) [pk]
